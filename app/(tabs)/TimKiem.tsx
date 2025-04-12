@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
-const API_URL = "http://192.168.33.103:3000/products/search"; // Thay API của bạn
+const API_URL = "http://192.168.33.104/products/search"; // Thay API của bạn
 
 const SearchScreen = () => {
   const [searchText, setSearchText] = useState("");

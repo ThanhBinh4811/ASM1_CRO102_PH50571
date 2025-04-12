@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } fr
 import { router, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.33.103:3000/products";
+const API_URL = "http://192.168.33.104:3000/products";
 
 const ManHinhChiTiet = () => {
   const { id } = useLocalSearchParams();
@@ -33,7 +33,7 @@ const ManHinhChiTiet = () => {
         }]
       };
 
-      const response = await fetch("http://192.168.33.103:3000/cart/add", {
+      const response = await fetch("http://192.168.33.104:3000/cart/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

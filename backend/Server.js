@@ -5,6 +5,7 @@ const connectDB = require("./config/db");
 const User = require("./models/User");
 const Product = require("./models/Product")
 const Cart = require("./models/Cart")
+const Order = require("./models/Order")
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -12,7 +13,7 @@ app.use(cors());
 // Kết nối MongoDB
 connectDB();
 
-// 📌 API ĐĂNG KÝ
+
 app.post("/register", async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -36,7 +37,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// 📌 API ĐĂNG NHẬP
+
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -55,7 +56,7 @@ app.post("/login", async (req, res) => {
 });
 
 
-// 📌 Lấy danh sách người dùng (admin mới có quyền xem)
+
 app.get("/users", async (req, res) => {
   try {
     const users = await User.find().select("-password"); // Không trả về mật khẩu
@@ -237,6 +238,131 @@ app.put('/cart/update-quantity', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error });
+  }
+});
+
+app.get("/UserInfor/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("name email");
+    if (!user) {
+      return res.status(404).json({ message: "User không tồn tại" });
+    }
+    res.json(user);
+  } catch (error) {
+    console.error("Lỗi khi lấy user:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+
+
+app.post("/Order/create", async (req, res) => {
+  console.log("🔍 Nhận dữ liệu tạo đơn hàng:", req.body);
+  
+  const {
+    userId,
+    phoneNumber,
+    address,
+    shippingMethod,
+    shippingFee,
+    paymentMethod,
+    subtotal,
+    selectedItems, // Đổi tên từ items sang selectedItems để khớp với client
+    totalAmount
+  } = req.body;
+
+  // Validate dữ liệu nghiêm ngặt hơn
+  if (!userId || !phoneNumber || !address || !selectedItems || !Array.isArray(selectedItems)) {
+    return res.status(400).json({ 
+      message: "Thiếu thông tin bắt buộc hoặc định dạng không đúng" 
+    });
+  }
+
+  // Kiểm tra từng sản phẩm trong selectedItems
+  for (const item of selectedItems) {
+    if (!item.productId || !item.price || !item.quantity) {
+      return res.status(400).json({
+        message: `Sản phẩm thiếu thông tin bắt buộc: productId, price hoặc quantity`
+      });
+    }
+  }
+
+  try {
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Giỏ hàng không tồn tại" });
+    }
+
+    // Tạo đơn hàng mới
+    const newOrder = new Order({
+      userId,
+      phoneNumber,
+      address,
+      shippingMethod,
+      shippingFee,
+      paymentMethod,
+      items: selectedItems.map(item => ({
+        productId: item.productId,
+        name: item.name || 'Không có tên',
+        image: item.image || '',
+        price: item.price,
+        quantity: item.quantity
+      })),
+      subtotal,
+      totalAmount,
+      status: "pending",
+      createdAt: new Date()
+    });
+
+    await newOrder.save();
+
+    // Xóa sản phẩm đã đặt khỏi giỏ hàng
+    await Cart.updateOne(
+      { userId },
+      { $pull: { items: { productId: { $in: selectedItems.map(i => i.productId) } } } }
+    );
+
+    res.status(201).json({ 
+      message: "Đặt hàng thành công", 
+      order: newOrder 
+    });
+  } catch (error) {
+    console.error("Lỗi khi tạo đơn hàng:", error);
+    res.status(500).json({ 
+      message: "Lỗi server khi đặt hàng",
+      error: error.message 
+    });
+  }
+});
+
+
+
+// Lấy tất cả đơn hàng của user
+app.get("/Order/user/:userId", async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.params.userId })
+      .sort({ createdAt: -1 }) // Sắp xếp mới nhất trước
+      .populate("userId", "name email"); // Lấy thông tin cơ bản của user
+    
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi lấy lịch sử đơn hàng" });
+  }
+});
+
+// Lấy chi tiết đơn hàng
+app.get("/Order/:orderId", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.orderId)
+      .populate("userId", "name email"); // Lấy thông tin user
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    res.json(order);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi lấy chi tiết đơn hàng" });
   }
 });
 // Chạy server

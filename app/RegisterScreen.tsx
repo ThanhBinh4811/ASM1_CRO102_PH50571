@@ -36,7 +36,7 @@ const RegisterScreen = () => {
     if (!validateInputs()) return;
 
     try {
-      const response = await fetch("http://192.168.33.103:3000/register", {
+      const response = await fetch("http://192.168.33.104:3000/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, phone, password }),

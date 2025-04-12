@@ -3,8 +3,9 @@ import { View, Text, FlatList, Image, StyleSheet, ActivityIndicator, TouchableOp
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Checkbox from 'expo-checkbox';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from "expo-router";
 
-const API_URL = "http://192.168.33.103:3000/cart";
+const API_URL = "http://192.168.33.104:3000/cart";
 
 const Cart = () => {
     const [cartItems, setCartItems] = useState<Array<any>>([]);
@@ -22,7 +23,7 @@ const Cart = () => {
             try {
                 const response = await fetch(`${API_URL}/${userId}`);
                 const data = await response.json();
-                if (Array.isArray(data.items)) { 
+                if (Array.isArray(data.items)) {
                     setCartItems(data.items);
                 } else {
                     setCartItems([]); // Nếu không phải mảng, khởi tạo thành mảng rỗng
@@ -76,21 +77,21 @@ const Cart = () => {
 
     const handleDeleteItem = async (productId: string) => {
         const userId = await AsyncStorage.getItem("userId");
-    
+
         try {
             const response = await fetch(`${API_URL}/delete`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, productId })
             });
-    
+
             const data = await response.json();
-    
+
             if (response.ok) {
                 // Cập nhật giỏ hàng bằng cách lọc bỏ sản phẩm vừa bị xóa
                 const updatedCartItems = cartItems.filter(item => item.productId !== productId);
                 setCartItems(updatedCartItems);
-    
+
                 // Cập nhật selectedItems để không còn giữ sản phẩm đã bị xóa
                 setSelectedItems(selectedItems.filter(id => id !== productId));
             } else {
@@ -109,51 +110,84 @@ const Cart = () => {
             .toLocaleString();
     };
 
+
+    const getSubtotal = () => {
+        if (!Array.isArray(cartItems)) return 0;
+        return cartItems
+            .filter(item => selectedItems.includes(item.productId))
+            .reduce((total, item) => total + (item.price * item.quantity), 0);
+    };
+    
+
     if (loading) return <ActivityIndicator size="large" color="green" />;
     if (!Array.isArray(cartItems) || cartItems.length === 0) return <Text style={styles.emptyText}>Giỏ hàng của bạn đang trống.</Text>;
 
     return (
         <View style={styles.container}>
-           <FlatList
-    data={Array.isArray(cartItems) ? cartItems : []}
-    keyExtractor={(item) => item.productId}
-    extraData={selectedItems}
-    renderItem={({ item }) => (
-        <View style={styles.item}>
-            <Checkbox
-                value={selectedItems.includes(item.productId)}
-                onValueChange={() => handleSelectItem(item.productId)}
-                style={styles.checkbox}
+            <FlatList
+                data={Array.isArray(cartItems) ? cartItems : []}
+                keyExtractor={(item) => item.productId}
+                extraData={selectedItems}
+                renderItem={({ item }) => (
+                    <View style={styles.item}>
+                        <Checkbox
+                            value={selectedItems.includes(item.productId)}
+                            onValueChange={() => handleSelectItem(item.productId)}
+                            style={styles.checkbox}
+                        />
+                        <Image source={{ uri: item.image }} style={styles.image} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.name}>{item.name}</Text>
+                            <Text style={styles.price}>{item.price.toLocaleString()}đ</Text>
+                            <View style={styles.quantityContainer}>
+                                <TouchableOpacity onPress={() => handleQuantityChange(item.productId, 'decrease')}>
+                                    <Ionicons name="remove-circle-outline" size={24} color="black" />
+                                </TouchableOpacity>
+                                <Text style={styles.quantity}>{item.quantity}</Text>
+                                <TouchableOpacity onPress={() => handleQuantityChange(item.productId, 'increase')}>
+                                    <Ionicons name="add-circle-outline" size={24} color="black" />
+                                </TouchableOpacity>
+                            </View>
+                            <TouchableOpacity onPress={() => handleDeleteItem(item.productId)}>
+                                <Text style={styles.delete}>Xoá</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
             />
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.price}>{item.price.toLocaleString()}đ</Text>
-                <View style={styles.quantityContainer}>
-                    <TouchableOpacity onPress={() => handleQuantityChange(item.productId, 'decrease')}>
-                        <Ionicons name="remove-circle-outline" size={24} color="black" />
-                    </TouchableOpacity>
-                    <Text style={styles.quantity}>{item.quantity}</Text>
-                    <TouchableOpacity onPress={() => handleQuantityChange(item.productId, 'increase')}>
-                        <Ionicons name="add-circle-outline" size={24} color="black" />
-                    </TouchableOpacity>
-                </View>
-                <TouchableOpacity onPress={() => handleDeleteItem(item.productId)}>
-                    <Text style={styles.delete}>Xoá</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    )}
-/>
 
-            {selectedItems.length > 0 && (
-                <View style={styles.footer}>
-                    <Text style={styles.totalText}>Tạm tính: {getTotalPrice()}đ</Text>
-                    <TouchableOpacity style={styles.checkoutButton}>
-                        <Text style={styles.checkoutText}>Tiến hành thanh toán</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+{selectedItems.length > 0 && (
+  <View style={styles.footer}>
+    <Text style={styles.totalText}>Tạm tính: {getTotalPrice()}đ</Text>
+    <TouchableOpacity
+      style={styles.checkoutButton}
+      onPress={() => {
+        // Lọc chỉ các sản phẩm được chọn với đầy đủ thông tin
+        const selectedProducts = cartItems
+          .filter(item => selectedItems.includes(item.productId))
+          .map(item => ({
+            productId: item.productId,
+            name: item.name,
+            image: item.image,
+            price: item.price,
+            quantity: item.quantity,
+          }));
+
+        router.push({
+          pathname: "/OrderScreen",
+          params: {
+            selectedItems: JSON.stringify(selectedProducts),
+            subtotal: getSubtotal().toString(),
+          },
+        });
+      }}
+    >
+      <Text style={styles.checkoutText}>Tiến hành thanh toán</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
+
         </View>
     );
 };

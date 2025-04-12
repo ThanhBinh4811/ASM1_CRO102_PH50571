@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-const API_URL = "http://192.168.33.103:3000/products"; // 🔥 API của bạn
+const API_URL = "http://192.168.33.104:3000/products"; // 🔥 API của bạn
 
 const DanhMuc = () => {
   const route = useRoute();

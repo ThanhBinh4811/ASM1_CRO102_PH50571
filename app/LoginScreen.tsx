@@ -14,7 +14,7 @@ const LoginScreen = () => {
   const handleLogin = async () => {
     setError(""); // Reset lỗi trước khi gửi request
     try {
-      const response = await fetch("http://192.168.33.103:3000/login", {
+      const response = await fetch("http://192.168.33.104:3000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   socialButtons: { flexDirection: "row", justifyContent: "center", gap: 20 },
   socialButton: { padding: 10, borderRadius: 10, backgroundColor: "#f5f5f5" },
   socialIcon: { width: 30, height: 30 },
-  icon: { width: 24, height: 24, tintColor: "gray" },
+  icon: { width: 22, height: 22, tintColor: "gray" },
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 15 },
   registerText: { color: "green", fontWeight: "bold" },
   inputError: { borderColor: "red", borderWidth: 1 },

@@ -5,7 +5,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-const API_URL = "http://192.168.33.103:3000/products";
+const API_URL = "http://192.168.33.104:3000/products";
 
 const HomeScreen = () => {
     const navigation = useNavigation();
